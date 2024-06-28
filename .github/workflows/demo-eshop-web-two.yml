@@ -21,37 +21,34 @@ env:
   WORKING_DIRECTORY: src\PublicApi
 jobs:
   build:
-    runs-on: windows-latest
-    steps:
-    - uses: actions/checkout@v4
-    - name: Setup .NET SDK
-      uses: actions/setup-dotnet@v3
-      with:
-        dotnet-version: ${{ env.DOTNET_CORE_VERSION }}
-    - name: Setup SwashBuckle .NET Core
-      uses: actions/setup-dotnet@v3
-      with:
-        dotnet-version: ${{ env.SWASHBUCKLE_DOTNET_CORE_VERSION }}
-    - name: Restore
-      run: dotnet restore ${{ env.WORKING_DIRECTORY }}\PublicApi.csproj
-    - name: Print directory contents
-      run: Get-ChildItem -Path "${{ env.WORKING_DIRECTORY }}" -Recurse
-    - name: Build
-      run: dotnet build ${{ env.WORKING_DIRECTORY }}\PublicApi.csproj --configuration ${{ env.CONFIGURATION }} --no-restore
-    - name: Test
-      run: dotnet test ${{ env.WORKING_DIRECTORY }}\PublicApi.csproj --no-build
-    - name: Publish
-      run: dotnet publish ${{ env.WORKING_DIRECTORY }}\PublicApi.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
-    - name: Install Swashbuckle CLI .NET Global Tool
-      run: dotnet tool install --global Swashbuckle.AspNetCore.Cli --version ${{ env.SWASHBUCLE_ASPNET_CORE_CLI_PACKAGE_VERSION }}
-      working-directory: ${{ env.WORKING_DIRECTORY }}
-    - name: Generate Open API Specification Document
-      run: dotnet swagger tofile --serialize-as-v2 --output ${{ env.API_IMPORT_SPECIFICATION_PATH }} ${{ env.API_IMPORT_DLL }} ${{ env.API_IMPORT_VERSION }}
-    - name: Publish Artifacts
-      uses: actions/upload-artifact@v3
-      with:
-        name: webapp
-        path: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
+      runs-on: windows-latest
+      steps:
+      - uses: actions/checkout@v4
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: ${{ env.DOTNET_CORE_VERSION }}
+      - name: Restore
+        run: dotnet restore ${{ env.WORKING_DIRECTORY }}\PublicApi.csproj
+      - name: Build
+        run: dotnet build ${{ env.WORKING_DIRECTORY }}\PublicApi.csproj --configuration ${{ env.CONFIGURATION }} --no-restore
+      - name: Test
+        run: dotnet test ${{ env.WORKING_DIRECTORY }}\PublicApi.csproj --no-build
+      - name: Publish
+        run: dotnet publish ${{ env.WORKING_DIRECTORY }}\PublicApi.csproj --configuration ${{ env.CONFIGURATION }} --no-build --output ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
+      - name: Install Swashbuckle CLI .NET Global Tool
+        run: dotnet tool install --global Swashbuckle.AspNetCore.Cli --version ${{ env.SWASHBUCLE_ASPNET_CORE_CLI_PACKAGE_VERSION }}
+      - name: Add .NET Core SDK tools to PATH
+        run: echo "$env:DOTNET_ROOT/tools" | Out-File -Append -FilePath $env:GITHUB_PATH -Encoding utf8
+      - name: Create publish directory
+        run: New-Item -ItemType Directory -Force -Path ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
+      - name: Generate Open API Specification Document
+        run: dotnet swagger tofile --serialize-as-v2 --output ${{ env.API_IMPORT_SPECIFICATION_PATH }} ${{ env.API_IMPORT_DLL }} ${{ env.API_IMPORT_VERSION }}
+      - name: Publish Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: webapp
+          path: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
   deploy:
     runs-on: windows-latest
     needs: build
