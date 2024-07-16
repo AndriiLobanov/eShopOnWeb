@@ -41,7 +41,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BlazorShared", "src\BlazorS
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PublicApiIntegrationTests", "tests\PublicApiIntegrationTests\PublicApiIntegrationTests.csproj", "{D53EF010-8F8C-4337-A059-456E19D8AE63}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FunctionApp1", "..\ProjectWithFunction\FunctionApp1\FunctionApp1.csproj", "{43648D5B-8363-445E-82AE-0B1D7EB0E533}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OrderItemsReserver", "..\ProjectWithFunction\FunctionApp1\OrderItemsReserver.csproj", "{43648D5B-8363-445E-82AE-0B1D7EB0E533}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
