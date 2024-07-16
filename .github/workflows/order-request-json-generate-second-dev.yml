@@ -5,10 +5,10 @@ on:
     - main
 env:
   AZURE_FUNCTIONAPP_NAME: order-request-json-generate-second
-  AZURE_FUNCTIONAPP_PACKAGE_PATH: .\published
+  AZURE_FUNCTIONAPP_PACKAGE_PATH: './FunctionAppForEShop/published' # set this to the path where you want the function app publish output to go
   CONFIGURATION: Release
   DOTNET_CORE_VERSION: 6.0.x
-  WORKING_DIRECTORY: ''
+  WORKING_DIRECTORY: './FunctionAppForEShop' # set this to the path to your Azure Functions project
   AZURE_FUNCTIONAPP_SLOT_NAME: dev
 jobs:
   build:
