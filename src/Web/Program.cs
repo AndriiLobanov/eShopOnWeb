@@ -35,31 +35,16 @@ else{
     {
         builder.Configuration.AddAzureKeyVault(new Uri(keyVaultEndpoint), credential);
     }
-    var catalogConnectionStringKey = builder.Configuration["AZURE_SQL_CATALOG_CONNECTION_STRING_KEY"];
-    if (!string.IsNullOrEmpty(catalogConnectionStringKey))
+    builder.Services.AddDbContext<CatalogContext>(c =>
     {
-        var catalogConnectionString = builder.Configuration[catalogConnectionStringKey];
-        if (!string.IsNullOrEmpty(catalogConnectionString))
-        {
-            builder.Services.AddDbContext<CatalogContext>(c =>
-            {
-                c.UseSqlServer(catalogConnectionString, sqlOptions => sqlOptions.EnableRetryOnFailure());
-            });
-        }
-    }
-
-    var identityConnectionStringKey = builder.Configuration["AZURE_SQL_IDENTITY_CONNECTION_STRING_KEY"];
-    if (!string.IsNullOrEmpty(identityConnectionStringKey))
+        var connectionString = builder.Configuration[builder.Configuration["AZURE_SQL_CATALOG_CONNECTION_STRING_KEY"] ?? ""];
+        c.UseSqlServer(connectionString, sqlOptions => sqlOptions.EnableRetryOnFailure());
+    });
+    builder.Services.AddDbContext<AppIdentityDbContext>(options =>
     {
-        var identityConnectionString = builder.Configuration[identityConnectionStringKey];
-        if (!string.IsNullOrEmpty(identityConnectionString))
-        {
-            builder.Services.AddDbContext<AppIdentityDbContext>(options =>
-            {
-                options.UseSqlServer(identityConnectionString, sqlOptions => sqlOptions.EnableRetryOnFailure());
-            });
-        }
-    }
+        var connectionString = builder.Configuration[builder.Configuration["AZURE_SQL_IDENTITY_CONNECTION_STRING_KEY"] ?? ""];
+        options.UseSqlServer(connectionString, sqlOptions => sqlOptions.EnableRetryOnFailure());
+    });
 }
 
 builder.Services.AddCookieSettings();
