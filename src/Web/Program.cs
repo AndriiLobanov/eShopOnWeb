@@ -16,6 +16,7 @@ using Microsoft.eShopWeb.Infrastructure.Data;
 using Microsoft.eShopWeb.Infrastructure.Identity;
 using Microsoft.eShopWeb.Web;
 using Microsoft.eShopWeb.Web.Configuration;
+using Microsoft.eShopWeb.Web.Configuration;
 using Microsoft.eShopWeb.Web.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 
@@ -29,17 +30,36 @@ if (builder.Environment.IsDevelopment() || builder.Environment.EnvironmentName =
 else{
     // Configure SQL Server (prod)
     var credential = new ChainedTokenCredential(new AzureDeveloperCliCredential(), new DefaultAzureCredential());
-    builder.Configuration.AddAzureKeyVault(new Uri(builder.Configuration["AZURE_KEY_VAULT_ENDPOINT"] ?? ""), credential);
-    builder.Services.AddDbContext<CatalogContext>(c =>
+    var keyVaultEndpoint = builder.Configuration["AZURE_KEY_VAULT_ENDPOINT"];
+    if (!string.IsNullOrEmpty(keyVaultEndpoint))
     {
-        var connectionString = builder.Configuration[builder.Configuration["AZURE_SQL_CATALOG_CONNECTION_STRING_KEY"] ?? ""];
-        c.UseSqlServer(connectionString, sqlOptions => sqlOptions.EnableRetryOnFailure());
-    });
-    builder.Services.AddDbContext<AppIdentityDbContext>(options =>
+        builder.Configuration.AddAzureKeyVault(new Uri(keyVaultEndpoint), credential);
+    }
+    var catalogConnectionStringKey = builder.Configuration["AZURE_SQL_CATALOG_CONNECTION_STRING_KEY"];
+    if (!string.IsNullOrEmpty(catalogConnectionStringKey))
     {
-        var connectionString = builder.Configuration[builder.Configuration["AZURE_SQL_IDENTITY_CONNECTION_STRING_KEY"] ?? ""];
-        options.UseSqlServer(connectionString, sqlOptions => sqlOptions.EnableRetryOnFailure());
-    });
+        var catalogConnectionString = builder.Configuration[catalogConnectionStringKey];
+        if (!string.IsNullOrEmpty(catalogConnectionString))
+        {
+            builder.Services.AddDbContext<CatalogContext>(c =>
+            {
+                c.UseSqlServer(catalogConnectionString, sqlOptions => sqlOptions.EnableRetryOnFailure());
+            });
+        }
+    }
+
+    var identityConnectionStringKey = builder.Configuration["AZURE_SQL_IDENTITY_CONNECTION_STRING_KEY"];
+    if (!string.IsNullOrEmpty(identityConnectionStringKey))
+    {
+        var identityConnectionString = builder.Configuration[identityConnectionStringKey];
+        if (!string.IsNullOrEmpty(identityConnectionString))
+        {
+            builder.Services.AddDbContext<AppIdentityDbContext>(options =>
+            {
+                options.UseSqlServer(identityConnectionString, sqlOptions => sqlOptions.EnableRetryOnFailure());
+            });
+        }
+    }
 }
 
 builder.Services.AddCookieSettings();
