@@ -125,7 +125,8 @@ builder.Services.AddSwaggerGen(c =>
 });
 builder.Services.AddApplicationInsightsTelemetry(new Microsoft.ApplicationInsights.AspNetCore.Extensions.ApplicationInsightsServiceOptions
 {
-    ConnectionString = builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"]
+    ConnectionString = builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"],
+    EnableAdaptiveSampling = false
 });
 
 builder.Logging.AddApplicationInsights(
