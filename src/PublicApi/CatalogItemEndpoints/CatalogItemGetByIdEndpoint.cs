@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.eShopWeb.ApplicationCore.Entities;
 using Microsoft.eShopWeb.ApplicationCore.Interfaces;
+using Microsoft.Extensions.Logging;
 using MinimalApi.Endpoint;
 
 namespace Microsoft.eShopWeb.PublicApi.CatalogItemEndpoints;
@@ -14,10 +15,12 @@ namespace Microsoft.eShopWeb.PublicApi.CatalogItemEndpoints;
 public class CatalogItemGetByIdEndpoint : IEndpoint<IResult, GetByIdCatalogItemRequest, IRepository<CatalogItem>>
 {
     private readonly IUriComposer _uriComposer;
+    private readonly ILogger<CatalogItemGetByIdEndpoint> _logger;
 
-    public CatalogItemGetByIdEndpoint(IUriComposer uriComposer)
+    public CatalogItemGetByIdEndpoint(IUriComposer uriComposer, ILogger<CatalogItemGetByIdEndpoint> logger)
     {
         _uriComposer = uriComposer;
+        _logger = logger;
     }
 
     public void AddRoute(IEndpointRouteBuilder app)
@@ -38,6 +41,7 @@ public class CatalogItemGetByIdEndpoint : IEndpoint<IResult, GetByIdCatalogItemR
         var item = await itemRepository.GetByIdAsync(request.CatalogItemId);
         if (item is null)
             return Results.NotFound();
+        _logger.LogInformation("Number of items returned from the database: {Count}", 1);
 
         response.CatalogItem = new CatalogItemDto
         {
