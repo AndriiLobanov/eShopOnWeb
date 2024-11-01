@@ -16,9 +16,6 @@
     <PackageReference Include="Microsoft.Azure.Functions.Worker.ApplicationInsights" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\src\Web\Web.csproj" />
-  </ItemGroup>
-  <ItemGroup>
     <None Update="host.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

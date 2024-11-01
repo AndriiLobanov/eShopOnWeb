@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
-using OrderDetails = Microsoft.eShopWeb.Web.ViewModels.OrderDetails;
+using OrderRequestJsonREsultFunction.Models;
 
 public static class OrderItemsReserver
 {
@@ -14,12 +14,20 @@ public static class OrderItemsReserver
         [HttpTrigger(AuthorizationLevel.Function, "post", Route = null)] HttpRequest req,
         ILogger log)
     {
-        // Deserialize request body to OrderDetails, which includes a list of BasketItemViewModel items
-        var orderDetails = await JsonSerializer.DeserializeAsync<OrderDetails>(req.Body);
+        // Convert rawRequestBody to a MemoryStream so it can be used with DeserializeAsync
+        var options = new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true // Still helpful for casing consistency
+        };
+        var orderDetails = await JsonSerializer.DeserializeAsync<OrderDetailsDto>(req.Body, options);
 
-        // Convert order details to JSON (if needed)
+        if (orderDetails == null)
+        {
+            log?.LogError("Received empty or invalid order details.");
+            return new BadRequestObjectResult("Invalid order details.");
+        }
+
         string orderJson = JsonSerializer.Serialize(orderDetails);
-
 
         // Retrieve the Blob Storage connection string from application settings
         string connectionString = Environment.GetEnvironmentVariable("AzureWebJobsStorage");
@@ -28,11 +36,10 @@ public static class OrderItemsReserver
 
         // Create a blob client and upload the JSON file
         var blobClient = containerClient.GetBlobClient($"order-{orderDetails.OrderId}.json");
-        using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(orderJson)))
+        using (var uploadStream = new MemoryStream(Encoding.UTF8.GetBytes(orderJson)))
         {
-            await blobClient.UploadAsync(stream, overwrite: true);
+            await blobClient.UploadAsync(uploadStream, overwrite: true);
         }
-
         return new OkResult();
     }
 }
