@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
-using OrderRequestJsonREsultFunction;
+using OrderDetails = Microsoft.eShopWeb.Web.ViewModels.OrderDetails;
 
 public static class OrderItemsReserver
 {

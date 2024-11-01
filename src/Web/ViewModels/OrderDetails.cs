@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.eShopWeb.Web.Pages.Basket;
 
-namespace OrderRequestJsonREsultFunction;
+namespace Microsoft.eShopWeb.Web.ViewModels;
 public class OrderDetails
 {
     public int OrderId { get; set; } // Add if an Order ID is needed for identification
