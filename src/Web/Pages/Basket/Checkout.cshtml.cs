@@ -1,4 +1,6 @@
-﻿using Ardalis.GuardClauses;
+﻿using System.Net.Http.Headers;
+using System.Text.Json;
+using Ardalis.GuardClauses;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -7,8 +9,8 @@ using Microsoft.eShopWeb.ApplicationCore.Entities.OrderAggregate;
 using Microsoft.eShopWeb.ApplicationCore.Exceptions;
 using Microsoft.eShopWeb.ApplicationCore.Interfaces;
 using Microsoft.eShopWeb.Infrastructure.Identity;
+using Microsoft.eShopWeb.Web.FunctionModels;
 using Microsoft.eShopWeb.Web.Interfaces;
-using Microsoft.eShopWeb.Web.ViewModels;
 
 namespace Microsoft.eShopWeb.Web.Pages.Basket;
 
@@ -22,6 +24,8 @@ public class CheckoutModel : PageModel
     private readonly IBasketViewModelService _basketViewModelService;
     private readonly IAppLogger<CheckoutModel> _logger;
     private readonly IConfiguration _configuration;
+    private string functionUrl;
+    private string functionKey;
     public CheckoutModel(IBasketService basketService,
         IBasketViewModelService basketViewModelService,
         SignInManager<ApplicationUser> signInManager,
@@ -35,7 +39,8 @@ public class CheckoutModel : PageModel
         _basketViewModelService = basketViewModelService;
         _logger = logger;
         _configuration = configuration;
-
+        functionUrl = _configuration["OrderItemsReserverUrl"];
+        functionKey = _configuration["FunctionKey"];
     }
 
     public BasketViewModel BasketModel { get; set; } = new BasketViewModel();
@@ -61,16 +66,20 @@ public class CheckoutModel : PageModel
             await _orderService.CreateOrderAsync(BasketModel.Id, new Address("123 Main St.", "Kent", "OH", "United States", "44240"));
             using (var httpClient = new HttpClient())
             {
-                var orderDetails = new OrderDetails
+                // Calculate total amount by summing the price * quantity for each item
+                var totalAmount = items.Sum(item => item.UnitPrice * item.Quantity);
+
+                var orderDetailsDto = new OrderDetailsDto
                 {
                     OrderId = BasketModel.Id,
-                    Items = items.ToList(),
-                    OrderDate = DateTime.UtcNow
+                    OrderDate = DateTime.UtcNow,
+                    TotalAmount = totalAmount,
+                    Items = items.Select(item => new ItemDto
+                    {
+                        ItemId = item.Id,
+                        Quantity = item.Quantity
+                    }).ToList()
                 };
-
-                // Get the function URL and key from configuration
-                var functionUrl = _configuration["OrderItemsReserverUrl"];
-                var functionKey = _configuration["FunctionKey"];
 
                 // Add the function key to the URL
                 if (!string.IsNullOrEmpty(functionKey))
@@ -78,7 +87,15 @@ public class CheckoutModel : PageModel
                     functionUrl = functionUrl + (functionUrl.Contains("?") ? "&" : "?") + $"code={functionKey}";
                 }
 
-                var response = await httpClient.PostAsJsonAsync(functionUrl, orderDetails);
+                var orderDetailsJson = JsonSerializer.Serialize(orderDetailsDto);
+                _logger.LogInformation("Serialized OrderDetailsDto: {OrderDetailsJson}", orderDetailsJson);
+
+                httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+                var response = await httpClient.PostAsJsonAsync(functionUrl, orderDetailsDto, new JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                });
+
             
                 if (!response.IsSuccessStatusCode)
                 {
