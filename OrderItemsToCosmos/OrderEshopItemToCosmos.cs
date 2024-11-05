@@ -36,7 +36,7 @@ namespace OrderItemsToCosmos
     }
 
     [Function("OrderEshopItemToCosmos")]
-    public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Function, "post")] HttpRequest req)
+    public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Function, "post", Route = null)] HttpRequest req)
     {
         _logger.LogInformation("Received new order details to be saved to CosmosDB");
 
