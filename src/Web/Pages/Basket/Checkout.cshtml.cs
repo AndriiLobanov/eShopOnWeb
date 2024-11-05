@@ -114,43 +114,55 @@ public class CheckoutModel : PageModel
     }
 
     private async Task ProcessObjectSendingToAzureFunctionAsync(Microsoft.eShopWeb.ApplicationCore.Entities.OrderAggregate.Order order, IEnumerable<BasketItemViewModel> items)
-    { 
-        using  var httpClient = new HttpClient();
-        var orderDetails = new OrderDetailsCosmos
-        {
-            Id = Guid.NewGuid().ToString(),
-            FinalPrice = order.Total(),
-            OrderId = order.Id.ToString(),
-            ShippingAddress = string.Join(',', order.ShipToAddress.City, order.ShipToAddress.Country,
-                order.ShipToAddress.State, order.ShipToAddress.Street),
-            Items = order.OrderItems.Select(x => new OrderItemCosmos
-            {
-                ItemName = x.ItemOrdered.ProductName,
-                Units = x.Units,
-                UnitPrice = x.UnitPrice
-            }).ToList() // Convert the IEnumerable to List
-        };
+{ 
+    _logger.LogInformation("Beginning process to send order details to Azure Function");
 
-        // Check if Items is empty, if so assign a new list
-        if (orderDetails.Items.Count == 0)
+    using var httpClient = new HttpClient();
+    var orderDetails = new OrderDetailsCosmos
+    {
+        Id = Guid.NewGuid().ToString(),
+        FinalPrice = order.Total(),
+        OrderId = order.Id.ToString(),
+        ShippingAddress = string.Join(',', order.ShipToAddress.City, order.ShipToAddress.Country,
+            order.ShipToAddress.State, order.ShipToAddress.Street),
+        Items = order.OrderItems.Select(x => new OrderItemCosmos
         {
-            orderDetails.Items = new List<OrderItemCosmos>();
-        }
+            ItemName = x.ItemOrdered.ProductName,
+            Units = x.Units,
+            UnitPrice = x.UnitPrice
+        }).ToList() // Convert the IEnumerable to List
+    };
 
-        httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-
-        var response = await httpClient.PostAsJsonAsync(functionUrl, orderDetails, new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-        });;
-
-        if (!response.IsSuccessStatusCode)
-        {
-            var errorContent = await response.Content.ReadAsStringAsync(); // Read error content
-            _logger.LogWarning("Failed to reserve order items. Status: {StatusCode}, Response: {ResponseContent}", response.StatusCode, errorContent);
-    
-            // Throw a more general HttpRequestException with detailed information
-            throw new HttpRequestException($"Request to reserve order items failed with status code {response.StatusCode}. Response: {errorContent}");
-        }
+    // Check if Items is empty, if so assign a new list
+    if (orderDetails.Items.Count == 0)
+    {
+        _logger.LogInformation("Order details do not contain any order items, assigning a new list");
+        orderDetails.Items = new List<OrderItemCosmos>();
     }
+
+    if (!string.IsNullOrEmpty(functionKey))
+    {
+        _logger.LogInformation("Adding function key to the function URL");
+        functionUrl = functionUrl + (functionUrl.Contains("?") ? "&" : "?") + $"code={functionKey}";
+    }
+
+    httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+    _logger.LogInformation("Sending order details to Azure Function at {FunctionUrl}", functionUrl);
+    var response = await httpClient.PostAsJsonAsync(functionUrl, orderDetails, new JsonSerializerOptions
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+    });
+
+    if (!response.IsSuccessStatusCode)
+    {
+        var errorContent = await response.Content.ReadAsStringAsync(); // Read error content
+        _logger.LogWarning("Failed to reserve order items. Status: {StatusCode}, Response: {ResponseContent}", response.StatusCode, errorContent);
+
+        // Throw a more general HttpRequestException with detailed information
+        throw new HttpRequestException($"Request to reserve order items failed with status code {response.StatusCode}. Response: {errorContent}");
+    }
+
+    _logger.LogInformation("Order details successfully sent to Azure Function");
+}
 }
