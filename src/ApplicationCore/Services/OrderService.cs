@@ -50,4 +50,9 @@ public class OrderService : IOrderService
 
         await _orderRepository.AddAsync(order);
     }
+
+    public async Task<Order> GetOrderAsync(int basketId)
+    {
+        return await _orderRepository.GetByIdAsync(basketId);
+    }
 }
