@@ -1,45 +1,106 @@
 ﻿using System.Text;
 using System.Text.Json;
+using Azure.Messaging.ServiceBus;
 using Azure.Storage.Blobs;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
-using OrderRequestJsonREsultFunction.Models;
+using OrderRequestJsonResultFunction.Models;
 
-public static class OrderItemsReserver
+namespace OrderRequestJsonResultFunction
 {
-    [Function("OrderItemsReserver")]
-    public static async Task<IActionResult> Run(
-        [HttpTrigger(AuthorizationLevel.Function, "post", Route = null)] HttpRequest req,
-        ILogger log)
+    public class OrderItemsReserver
     {
-        // Convert rawRequestBody to a MemoryStream so it can be used with DeserializeAsync
-        var options = new JsonSerializerOptions
-        {
-            PropertyNameCaseInsensitive = true // Still helpful for casing consistency
-        };
-        var orderDetails = await JsonSerializer.DeserializeAsync<OrderDetailsDto>(req.Body, options);
+        private const string _blobContainerClientName = "orderrequestcontainer";
+        private const string TopicName = "orderitemreserver";
+        private const string SubscriptionName = "eShopWebFunction";
+        private readonly ServiceBusClient _serviceBusClient;
+        private string serviceBusConnectionString;
+        private readonly ILogger<OrderItemsReserver> _logger;
 
-        if (orderDetails == null)
+        public OrderItemsReserver(ILogger<OrderItemsReserver> logger)
         {
-            log?.LogError("Received empty or invalid order details.");
-            return new BadRequestObjectResult("Invalid order details.");
+            serviceBusConnectionString = Environment.GetEnvironmentVariable("ServiceBusConnectionString") ?? "Endpoint=sb://sbforeshopbwebapp.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=Flyc98YlQsIZVOTMXQQkJ1tCnzWyi10bx+ASbHIoBOg=";
+            _serviceBusClient = new ServiceBusClient(serviceBusConnectionString);
+            _logger = logger;
         }
 
-        string orderJson = JsonSerializer.Serialize(orderDetails);
-
-        // Retrieve the Blob Storage connection string from application settings
-        string connectionString = Environment.GetEnvironmentVariable("AzureWebJobsStorage");
-        var blobServiceClient = new BlobServiceClient(connectionString);
-        var containerClient = blobServiceClient.GetBlobContainerClient("orderrequestcontainer");
-
-        // Create a blob client and upload the JSON file
-        var blobClient = containerClient.GetBlobClient($"order-{orderDetails.OrderId}.json");
-        using (var uploadStream = new MemoryStream(Encoding.UTF8.GetBytes(orderJson)))
+        [Function("OrderItemsReserver")]
+        public async Task<IActionResult> Run(
+            [ServiceBusTrigger(TopicName, SubscriptionName, Connection = "ServiceBusConnectionString")]  string message)
         {
-            await blobClient.UploadAsync(uploadStream, overwrite: true);
+            // var serviceBusProcessor = _serviceBusClient.CreateProcessor(TopicName, SubscriptionName, new ServiceBusProcessorOptions());
+
+            try
+            {
+                // Deserialize the incoming JSON string to OrderDetailsDto
+                var orderDetails = JsonSerializer.Deserialize<OrderDetailsDto>(message, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+
+                if (orderDetails == null)
+                {
+                    _logger.LogError("Invalid order details. Cannot process null order.");
+                    return new BadRequestResult();
+                }
+
+                _logger.LogInformation("Deserialized OrderDetailsDto: OrderId={OrderId}, TotalAmount={TotalAmount}", orderDetails.OrderId, orderDetails.TotalAmount);
+                
+                // Serialize the object back into JSON for Blob Storage upload
+                var orderJson = JsonSerializer.Serialize(orderDetails);
+
+                // Retrieve the Blob Storage connection string
+                var connectionString = Environment.GetEnvironmentVariable("AzureWebJobsStorage");
+                var blobServiceClient = new BlobServiceClient(connectionString);
+                var containerClient = blobServiceClient.GetBlobContainerClient(_blobContainerClientName);
+
+                // Ensure the container exists
+                await containerClient.CreateIfNotExistsAsync();
+                
+                // Create a blob with a unique name
+                var blobClient = containerClient.GetBlobClient($"order-{orderDetails.OrderId}.json");
+
+                using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(orderJson)))
+                {
+                    await blobClient.UploadAsync(stream, overwrite: true);
+                }
+
+                // serviceBusProcessor.ProcessMessageAsync += MessageHandler;
+                // serviceBusProcessor.ProcessErrorAsync += ErrorHandler;
+                
+                // start processing
+                //await serviceBusProcessor.StartProcessingAsync();
+
+                // stop processing
+                // await serviceBusProcessor.StopProcessingAsync();
+            }
+            finally
+            {
+                // Calling DisposeAsync on client types is required to ensure that network
+                // resources and other unmanaged objects are properly cleaned up.
+                // await serviceBusProcessor.DisposeAsync();
+                await _serviceBusClient.DisposeAsync();
+            }
+            
+            return new OkResult();
         }
-        return new OkResult();
+        
+        // handle received messages
+        private async Task MessageHandler(ProcessMessageEventArgs args)
+        {
+            var body = args.Message.Body.ToString();
+            Console.WriteLine($"Received: {body} from subscription: {TopicName}");
+
+            // complete the message. messages is deleted from the subscription. 
+            await args.CompleteMessageAsync(args.Message);
+        }
+
+        // handle any errors when receiving messages
+        private Task ErrorHandler(ProcessErrorEventArgs args)
+        {
+            Console.WriteLine(args.Exception.ToString());
+            return Task.CompletedTask;
+        }
     }
 }

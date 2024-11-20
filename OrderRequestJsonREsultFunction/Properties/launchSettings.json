@@ -1,9 +1,13 @@
 {
   "profiles": {
-    "OrderRequestJsonREsultFunction": {
+    "OrderRequestJsonResultFunction": {
       "commandName": "Project",
       "commandLineArgs": "--port 7006",
-      "launchBrowser": false
+      "launchBrowser": false,
+      "environmentVariables": {
+        "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+        "ServiceBusConnectionString": "Endpoint=sb://sbforeshopbwebapp.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=Flyc98YlQsIZVOTMXQQkJ1tCnzWyi10bx+ASbHIoBOg="
+      }
     }
   }
 }
