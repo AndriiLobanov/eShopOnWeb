@@ -41,7 +41,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BlazorShared", "src\BlazorS
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PublicApiIntegrationTests", "tests\PublicApiIntegrationTests\PublicApiIntegrationTests.csproj", "{D53EF010-8F8C-4337-A059-456E19D8AE63}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OrderRequestJsonREsultFunction", "OrderRequestJsonREsultFunction\OrderRequestJsonREsultFunction.csproj", "{31A5D50F-2C4C-47DF-BAA6-535C2BD3A6E8}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OrderRequestJsonResultFunction", "OrderRequestJsonREsultFunction\OrderRequestJsonResultFunction.csproj", "{31A5D50F-2C4C-47DF-BAA6-535C2BD3A6E8}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
