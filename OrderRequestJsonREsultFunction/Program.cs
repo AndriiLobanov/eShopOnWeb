@@ -6,6 +6,7 @@ var host = new HostBuilder()
     .ConfigureServices(services =>
     {
         services.AddApplicationInsightsTelemetryWorkerService();
+        services.AddHttpClient();
     })
     .Build();
 
