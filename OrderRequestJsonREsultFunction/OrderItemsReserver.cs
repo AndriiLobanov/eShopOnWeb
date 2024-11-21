@@ -24,7 +24,7 @@ namespace OrderRequestJsonResultFunction
         public OrderItemsReserver(ILogger<OrderItemsReserver> logger, IConfiguration configuration)
         {
             _configuration = configuration;
-            serviceBusConnectionString = _configuration["ServiceBusConnectionString"] ?? "Endpoint=sb://sbforeshopbwebapp.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=Flyc98YlQsIZVOTMXQQkJ1tCnzWyi10bx+ASbHIoBOg=";
+            serviceBusConnectionString = _configuration["ServiceBusConnectionString"];
             _serviceBusClient = new ServiceBusClient(serviceBusConnectionString);
             _logger = logger;
         }
