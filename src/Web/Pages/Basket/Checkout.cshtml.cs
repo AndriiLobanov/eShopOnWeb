@@ -12,13 +12,15 @@ using Microsoft.eShopWeb.ApplicationCore.Interfaces;
 using Microsoft.eShopWeb.Infrastructure.Identity;
 using Microsoft.eShopWeb.Web.FunctionModels;
 using Microsoft.eShopWeb.Web.Interfaces;
+using MediatR;
+using Mono.TextTemplating;
 
 namespace Microsoft.eShopWeb.Web.Pages.Basket;
 
 [Authorize]
 public class CheckoutModel : PageModel
 {
-    private const string TopicName = "";
+    private const string TopicName = "orders";
     private readonly IBasketService _basketService;
     private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly IOrderService _orderService;
@@ -156,10 +158,26 @@ public class CheckoutModel : PageModel
             functionUrl = functionUrl + (functionUrl.Contains("?") ? "&" : "?") + $"code={functionKey}";
         }
 
+        OrderDetailsCosmos orderDetails = new OrderDetailsCosmos
+        {
+            Id = Guid.NewGuid().ToString(),
+            OrderId = order.OrderId.ToString(),
+            FinalPrice = order.Items.Count*5,
+            ShippingAddress = "123 Main St., Kent, OH, united States",
+            Items = new List<OrderItemCosmos>()
+            {
+                new OrderItemCosmos
+                {
+                    ItemName = order.Items.First().ItemId.ToString(),
+                    UnitPrice = 1,
+                    Units = order.Items.Count
+                }
+            }
+        };
         httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
         _logger.LogInformation("Sending order details to Azure Function at {FunctionUrl}", functionUrl);
-        var response = await httpClient.PostAsJsonAsync(functionUrl, order, new JsonSerializerOptions
+        var response = await httpClient.PostAsJsonAsync(functionUrl, orderDetails, new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         });

@@ -24,7 +24,7 @@ namespace OrderItemsFunction
         public OrderItemsReserver(ILogger<OrderItemsReserver> logger, IConfiguration configuration)
         {
             _logger = logger;
-            _configuration=configuration;
+            _configuration = configuration;
             serviceBusConnectionString = _configuration["ServiceBusConnectionString"];
             _serviceBusClient = new ServiceBusClient(serviceBusConnectionString);
         }
@@ -35,7 +35,7 @@ namespace OrderItemsFunction
             string message)
         {
 
-        try
+            try
             {
                 // Deserialize the incoming JSON string to OrderDetailsDto
                 var orderDetails = JsonSerializer.Deserialize<OrderDetailsDto>(message, new JsonSerializerOptions
@@ -110,7 +110,7 @@ namespace OrderItemsFunction
         private async Task CallLogicAppIfBlobContainerFailedUpload(OrderDetailsDto orderDetails)
         {
             string logicAppUrl = _configuration["LogicAppWebhookUrl"];
-            var payload = new 
+            var payload = new
             {
                 OrderId = orderDetails.OrderId,
                 ItemId = orderDetails.Items.First().ItemId,
@@ -118,7 +118,7 @@ namespace OrderItemsFunction
             };
 
             var jsonPayload = JsonSerializer.Serialize(payload);
-            var content = new StringContent(jsonPayload,  encoding:Encoding.UTF8, "application/json");
+            var content = new StringContent(jsonPayload, encoding: Encoding.UTF8, "application/json");
             using var httpClient = new HttpClient();
             var response = await httpClient.PostAsync(logicAppUrl, content);
             if (response.IsSuccessStatusCode)
@@ -130,6 +130,5 @@ namespace OrderItemsFunction
                 _logger.LogError($"Failed to trigger Logic App. Status code: {response.StatusCode}");
             }
         }
-    }
     }
 }

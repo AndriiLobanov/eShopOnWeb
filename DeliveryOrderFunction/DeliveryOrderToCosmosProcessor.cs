@@ -4,6 +4,7 @@ using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
 using System.Net;
 using System.Text.Json;
+using DeliveryOrderFunction.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
@@ -35,7 +36,7 @@ namespace DeliveryOrderFunction
         }
 
         [Function("DeliveryOrder")]
-        public IActionResult Run([HttpTrigger(AuthorizationLevel.Anonymous, "get", "post")] HttpRequest req)
+        public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Anonymous, "get", "post")] HttpRequest req)
         {
             _logger.LogInformation("Received new order details to be saved to CosmosDB");
 
@@ -51,16 +52,16 @@ namespace DeliveryOrderFunction
                 return new BadRequestObjectResult("Invalid order details.");
             }
 
-            order.PartitionKey = "PartitionKeyValue";
-
+            string partitionKey = "PartitionKeyValue";
+            
             try
             {
                 _logger.LogInformation("Creating CosmosDB database and container if they don't exist");
                 _cosmosDatabase = await _cosmosClient.CreateDatabaseIfNotExistsAsync(cosmosDatabaseName);
                 _cosmosContainer = await _cosmosDatabase.CreateContainerIfNotExistsAsync(cosmosContainerName, "/PartitionKey");
-
+                order.PartitionKey = partitionKey;
                 _logger.LogInformation("Saving order details to CosmosDB");
-                var response = await _cosmosContainer.CreateItemAsync(order, new PartitionKey(order.PartitionKey));
+                var response = await _cosmosContainer.CreateItemAsync(order, new PartitionKey(partitionKey));
 
                 if (response is null &&
                     response.StatusCode != HttpStatusCode.OK &&
